@@ -1,0 +1,267 @@
+import { BinaryTreeNode } from "./BinaryTreeNode";
+
+class RedBlackTreeNode extends BinaryTreeNode {
+    constructor(key, data, isRed = true) {
+        if (key == null || Number.isNaN(key)) throw new Error('Key must not be null, undefined, or NaN');
+        super(data === undefined ? key : data);
+        this.key = key;
+        this.isRed = isRed;
+    }
+}
+
+export class RedBlackTree {
+    #root;
+
+    constructor(key, data) {
+        if (key == null) return;
+        this.#root = new RedBlackTreeNode(key, data, false);
+    }
+
+    // Perform a left rotation
+    #rotateLeft(initialRoot, pivot) {
+        const parent = initialRoot.parent;
+
+        if (!parent) {
+            this.#root = pivot;
+        } else if (parent.left === initialRoot) {
+            parent.setLeft(pivot);
+        } else {
+            parent.setRight(pivot);
+        }
+
+        initialRoot.setRight(pivot.left);
+        pivot.setLeft(initialRoot);
+    }
+
+    /**
+     * Performs a right rotation
+     * @param {RedBlackTreeNode} initialRoot - initial root of the subtree
+     * @param {RedBlackTreeNode} pivot  - the new root
+     */
+    #rotateRight(initialRoot, pivot) {
+        const parent = initialRoot.parent;
+
+        if (!parent) {
+            this.#root = pivot;
+        } else if (parent.left === initialRoot) {
+            parent.setLeft(pivot);
+        } else {
+            parent.setRight(pivot);
+        }
+
+        initialRoot.setLeft(pivot.right);
+        pivot.setRight(initialRoot);
+    }
+
+    /**
+     * Performs a left rotation
+     * @param {RedBlackTreeNode} initialRoot - initial root of the subtree
+     * @param {RedBlackTreeNode} pivot  - the new root
+     */
+    #handleRotations(curr, parent, grandParent) {
+        grandParent.isRed = true;
+        let isLeftRotation = false;
+        let pivot = parent;
+
+        // check for preliminary rotations
+        if (grandParent.left === parent) {
+            if (parent.right === curr) {
+                this.#rotateLeft(pivot, curr);
+                pivot = curr;
+                curr.isRed = false;
+            } else {
+                parent.isRed = false;
+            }
+        } else {
+            isLeftRotation = true;
+            if (parent.left === curr) {
+                this.#rotateRight(pivot, curr);
+                pivot = curr;
+                curr.isRed = false;
+            } else {
+                parent.isRed = false;
+            }
+        }
+
+        // perform primary rotation
+        isLeftRotation ? this.#rotateLeft(grandParent, pivot) : this.#rotateRight(grandParent, pivot);
+    }
+
+    /** 
+     * Repairs the tree by looking for violations
+     * @param {RedBlackTreeNode} node - starting point of the repair mechanism
+     */
+    #fixInsertionViolations(node) {
+        if (!node || !node.parent || !node.parent.isRed) {
+            return;
+        }
+
+        let curr = node;
+        while (true) {
+            const parent = curr.parent;
+            if (!parent || !parent.isRed) return;
+
+            const grandParent = parent.parent;
+            const uncle = grandParent.left === parent ? grandParent.right : grandParent.left;
+
+            // Handle second case
+            if (!uncle || !uncle.isRed) {
+                this.#handleRotations(curr, parent, grandParent);
+            // Handle first case
+            } else {
+                uncle.isRed = false;
+                parent.isRed = false;
+                if (grandParent !== this.#root) grandParent.isRed = true;
+            }
+
+            // move up
+            curr = grandParent;
+        }
+    }
+
+    /**
+     * fixes deletion violations from the deleted node
+     * @param {RedBlackTreeNode} parent - parent of the deleted node 
+     * @param {boolean} isLeftChild - determines whether the deleted node is the left child of its parent or not
+     * @param {boolean} isRed - determines whether the deleted node is red or black
+     */
+    #fixDeletionViolations(successorParent, successorWasLeftChild, isSuccessorRed) {
+        if (isSuccessorRed) return;
+
+        // add rest of the code
+    }
+
+    /**
+     * Find a specific node given a key
+     * @param {any} key - identifier for the target node
+     * @returns 
+     */
+    #findNode(key) {
+        let curr = this.#root;
+        while (curr) {
+            if (curr.key === key) {
+                return curr;
+            }
+            curr = curr.key > key ? curr.left : curr.right;
+        }
+        return null;
+    }
+
+    /**
+     * Inserts a node into the tree
+     * @param {any} key - identifier of the node
+     * @param {any} data - data of the node
+     */
+    insert(key, data) {
+        if (!this.#root) {
+            this.#root = new RedBlackTreeNode(key, data, false);
+            return;
+        }
+
+        const node = new RedBlackTreeNode(key, data, true);
+        let curr = this.#root;
+        while (curr) {
+            if (curr.key > key) {
+                if (curr.left) {
+                    curr = curr.left;
+                } else {
+                    curr.setLeft(node);
+                    break;
+                }
+            } else if (curr.key < key) {
+                if (curr.right) {
+                    curr = curr.right;
+                } else {
+                    curr.setRight(node);
+                    break;
+                }
+            } else {
+                throw new Error(`An element with the key "${key}" already exists in the tree`);
+            }
+        }
+
+        // Repair the tree
+        this.#fixInsertionViolations(node);
+    }
+
+    /** 
+     * Gets the data of a node given a key.
+     * @param {any} key - identifier of the target node
+     * @returns {any} the value of the target node or null if nothing was found
+     */
+    getData(key) {
+        const node = this.#findNode(key);
+        return node ? node.data : null;
+    }
+
+    /** 
+     * Updates the data of a node given a key.
+     * @param {any} key - identifier of the target node
+     * @returns {Boolean} a boolean representing if the node's data was updated or not
+     */
+    updateData(key, data) {
+        const node = this.#findNode(key);
+        if (node) {
+            node.data = data;
+            return true;
+        }
+        return false;
+    }
+
+    /** 
+     * Deletes a node from the tree given a key.
+     * @param {any} key - identifier of the target node
+     * @returns {Boolean} a boolean representing if the node was deleted or not
+     */
+    delete(key) {
+        const targetNode = this.#findNode(key);
+        if (!targetNode) return false;
+        
+        let successor = targetNode.right;
+        while (successor) {
+            const left = successor.left;
+            if (left) {
+                successor = left;
+            } else {
+                break;
+            }
+        }
+
+        const isSuccessorRed = successor.isRed;
+        let successorParent;
+        let successorWasLeftChild = false;
+        if (!successor) {
+            successor = targetNode;
+
+            successorParent = successor.parent;
+            if (!successorParent) this.#root = successor.left;
+            else if (successorParent.left === successor) {
+                successorWasLeftChild = true;
+                successorParent.setLeft(successor.left);
+            } else {
+                successorParent.setRight(successor.left);
+            }
+        } else {
+            successorParent = successor.parent;
+            successor.setLeft(targetNode.left);
+            if (successorParent !== targetNode) {
+                successor.setRight(targetNode.right);   
+            } else {
+                successorWasLeftChild = true;
+            }
+            successor.isRed = targetNode.isRed;
+
+            if (!targetNode.parent) {
+                this.#root = successor;
+            } else if (targetNode.parent.left === targetNode) {
+                targetNode.parent.setLeft(successor);
+            } else {
+                targetNode.parent.setRight(successor);
+            }
+        }
+
+        // fix violations
+        this.#fixDeletionViolations(successorParent, successorWasLeftChild, isSuccessorRed);
+        return true;
+    }
+}
