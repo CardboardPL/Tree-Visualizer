@@ -1,4 +1,4 @@
-import { BinaryTreeNode } from "./BinaryTreeNode";
+import { BinaryTreeNode } from "./BinaryTreeNode.js";
 
 class RedBlackTreeNode extends BinaryTreeNode {
     constructor(key, data, isRed = true) {
